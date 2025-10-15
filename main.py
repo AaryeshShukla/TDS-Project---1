@@ -132,6 +132,8 @@ def process_request(data):
 
 # === Main endpoint ===
 @app.post("/api-endpoint")
+async def test_endpoint():
+    return {"status": "API endpoint alive"}
 async def receive_request(request: Request, background_tasks: BackgroundTasks):
     data = await request.json()
     print("📩 Received request:", data)
