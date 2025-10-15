@@ -13,7 +13,7 @@ from app.notify import notify_evaluation_server
 
 load_dotenv()
 USER_SECRET = os.getenv("USER_SECRET")
-USERNAME = os.getenv("GITHUB_USERNAME")
+USERNAME = os.getenv("GIT_USERNAME")
 PROCESSED_PATH = "/tmp/processed_requests.json"
 
 app = FastAPI()
