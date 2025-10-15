@@ -1,24 +1,19 @@
 import os
 import base64
 import mimetypes
+import requests
 from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
-from openai import OpenAI
 
+# Load environment variables
 load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key=OPENAI_API_KEY)
+PIPE_TOKEN = os.getenv("PIPE_TOKEN")
 
 TMP_DIR = Path("/tmp/llm_attachments")
 TMP_DIR.mkdir(parents=True, exist_ok=True)
 
 def decode_attachments(attachments):
-    """
-    attachments: list of {name, url: data:<mime>;base64,<b64>}
-    Saves files into /tmp/llm_attachments/<name>
-    Returns list of dicts: {"name": name, "path": "/tmp/..", "mime": mime, "size": n}
-    """
     saved = []
     for att in attachments or []:
         name = att.get("name") or "attachment"
@@ -43,10 +38,6 @@ def decode_attachments(attachments):
     return saved
 
 def summarize_attachment_meta(saved):
-    """
-    saved is list from decode_attachments.
-    Returns a short human-readable summary string for the prompt.
-    """
     summaries = []
     for s in saved:
         nm = s["name"]
@@ -69,9 +60,6 @@ def summarize_attachment_meta(saved):
     return "\\n".join(summaries)
 
 def _strip_code_block(text: str) -> str:
-    """
-    If text is inside triple-backticks, return inner contents. Otherwise return text as-is.
-    """
     if "```" in text:
         parts = text.split("```")
         if len(parts) >= 2:
@@ -96,15 +84,10 @@ def generate_readme_fallback(brief: str, checks=None, attachments_meta=None, rou
 2. No build steps required.
 
 ## Notes
-This README was generated as a fallback (OpenAI did not return an explicit README).
+This README was generated as a fallback (OpenAI or AI Pipe failed).
 """
 
 def generate_app_code(brief: str, attachments=None, checks=None, round_num=1, prev_readme=None):
-    """
-    Generate or revise an app using the OpenAI Responses API.
-    - round_num=1: build from scratch
-    - round_num=2: refactor based on new brief and previous README/code
-    """
     saved = decode_attachments(attachments or [])
     attachments_meta = summarize_attachment_meta(saved)
 
@@ -143,23 +126,34 @@ You are a professional web developer assistant.
 """
 
     try:
-        response = client.responses.create(
-            model="gpt-5",
-            input=[
-                {"role": "system", "content": "You are a helpful coding assistant that outputs runnable web apps."},
-                {"role": "user", "content": user_prompt}
-            ]
+        # Send request to AI Pipe endpoint
+        response = requests.post(
+            "https://api.pipe.ai/v1/responses",
+            headers={
+                "Authorization": f"Bearer {PIPE_TOKEN}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "gpt-5",
+                "input": [
+                    {"role": "system", "content": "You are a helpful coding assistant that outputs runnable web apps."},
+                    {"role": "user", "content": user_prompt}
+                ]
+            },
+            timeout=120
         )
-        text = response.output_text or ""
-        print("✅ Generated code using new OpenAI Responses API.")
+        response.raise_for_status()
+        data = response.json()
+        text = data.get("output_text") or ""
+        print("✅ Generated code using AI Pipe API.")
     except Exception as e:
-        print("⚠ OpenAI API failed, using fallback HTML instead:", e)
+        print("⚠ AI Pipe API failed, using fallback HTML instead:", e)
         text = f"""
 <html>
   <head><title>Fallback App</title></head>
   <body>
     <h1>Hello (fallback)</h1>
-    <p>This app was generated as a fallback because OpenAI failed. Brief: {brief}</p>
+    <p>This app was generated as a fallback because AI Pipe failed. Brief: {brief}</p>
   </body>
 </html>
 
