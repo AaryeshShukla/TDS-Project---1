@@ -9,6 +9,7 @@ from app.github_utils import (
     generate_mit_license,
 )
 from app.github_utils import create_or_update_binary_file
+from app.notify import notify_evaluation_server
 
 load_dotenv()
 USER_SECRET = os.getenv("USER_SECRET")
