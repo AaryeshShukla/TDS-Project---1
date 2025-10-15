@@ -18,6 +18,10 @@ PROCESSED_PATH = "/tmp/processed_requests.json"
 
 app = FastAPI()
 
+@app.get("/")
+async def root():
+    return {"status": "FastAPI server is running", "message": "Use POST /api-endpoint to submit requests"}
+
 # === Persistence for processed requests ===
 def load_processed():
     if os.path.exists(PROCESSED_PATH):
@@ -40,6 +44,9 @@ def process_request(data):
     saved_attachments = decode_attachments(attachments)
     print("Attachments saved:", saved_attachments)
 
+    # Step 1: Get or create repo first
+    repo = create_repo(task_id, description=f"Auto-generated app for task: {data['brief']}")
+
     # Optional: fetch previous README for round 2
     prev_readme = None
     if round_num == 2:
@@ -60,9 +67,6 @@ def process_request(data):
 
     files = gen.get("files", {})
     saved_info = gen.get("attachments", [])
-
-    # Step 1: Get or create repo
-    repo = create_repo(task_id, description=f"Auto-generated app for task: {data['brief']}")
 
     # Step 2: Round-specific logic
     if round_num == 1:
@@ -132,8 +136,6 @@ def process_request(data):
 
 # === Main endpoint ===
 @app.post("/api-endpoint")
-async def test_endpoint():
-    return {"status": "API endpoint alive"}
 async def receive_request(request: Request, background_tasks: BackgroundTasks):
     data = await request.json()
     print("📩 Received request:", data)
@@ -158,3 +160,7 @@ async def receive_request(request: Request, background_tasks: BackgroundTasks):
 
     # Immediate HTTP 200 acknowledgment
     return {"status": "accepted", "note": f"processing round {data['round']} started"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=5000)
