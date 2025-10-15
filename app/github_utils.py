@@ -8,8 +8,8 @@ from datetime import datetime
 
 load_dotenv()
 
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-USERNAME = os.getenv("GITHUB_USERNAME")
+GITHUB_TOKEN = os.getenv("GIT_TOKEN")
+USERNAME = os.getenv("GIT_USERNAME")
 g = Github(GITHUB_TOKEN)
 
 def create_repo(repo_name: str, description: str = ""):
